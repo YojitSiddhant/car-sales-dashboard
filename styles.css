@@ -1,0 +1,41 @@
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+canvas {
+  width: 100%;
+}
+
+#columnToggles .form-check {
+  margin-bottom: 0.25rem;
+}
+
+.hidden-col {
+  display: none !important;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sort-indicator {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.sorted-asc .sort-indicator::after {
+  content: "▲";
+}
+
+.sorted-desc .sort-indicator::after {
+  content: "▼";
+}
+
+.highlight-row td {
+  background: #fff3cd !important;
+}
+
+.highlight-col {
+  background: #e0f2fe !important;
+}
