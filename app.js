@@ -19,6 +19,9 @@ const els = {
   kpiAvgKms: document.getElementById("kpiAvgKms"),
   fuelChart: document.getElementById("fuelChart"),
   yearChart: document.getElementById("yearChart"),
+  scatterChart: document.getElementById("scatterChart"),
+  fuelAvgChart: document.getElementById("fuelAvgChart"),
+  sellerAvgChart: document.getElementById("sellerAvgChart"),
   tableBody: document.getElementById("tableBody"),
   tableCount: document.getElementById("tableCount"),
   columnToggles: document.getElementById("columnToggles"),
@@ -26,6 +29,8 @@ const els = {
   highlightMode: document.querySelectorAll("input[name=\"highlightMode\"]"),
   clearHighlight: document.getElementById("clearHighlight"),
   exportCsv: document.getElementById("exportCsv"),
+  comparePanel: document.getElementById("comparePanel"),
+  clearCompare: document.getElementById("clearCompare"),
   pageSize: document.getElementById("pageSize"),
   prevPage: document.getElementById("prevPage"),
   nextPage: document.getElementById("nextPage"),
@@ -59,6 +64,8 @@ let sortKey = null;
 let sortDir = "asc";
 let currentPage = 1;
 let pageSize = 25;
+const compareMap = new Map();
+const maxCompare = 4;
 
 const bikeNames = new Set([
   "Activa 3g",
@@ -128,13 +135,14 @@ function getVehicleType(name) {
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   const headers = lines.shift().split(",").map(h => h.trim());
-  return lines.map(line => {
+  return lines.map((line, index) => {
     const values = line.split(",");
     const row = {};
     headers.forEach((header, idx) => {
       row[header] = values[idx] ? values[idx].trim() : "";
     });
     return {
+      id: index + 1,
       carName: row.Car_Name,
       year: Number(row.Year),
       sellingPrice: Number(row.Selling_Price),
@@ -203,8 +211,12 @@ function updateKPIs() {
 function renderTable(data) {
   els.tableBody.innerHTML = "";
   data.forEach(item => {
+    const checked = compareMap.has(item.id) ? "checked" : "";
     const row = document.createElement("tr");
     row.innerHTML = `
+      <td class="compare-col">
+        <input type="checkbox" class="form-check-input compare-check" data-id="${item.id}" ${checked}>
+      </td>
       <td data-col="carName">${item.carName}</td>
       <td data-col="year">${item.year}</td>
       <td data-col="sellingPrice">${currencyFormat.format(item.sellingPrice)}</td>
@@ -274,6 +286,36 @@ function updateTableView() {
   renderTable(pageData);
   updatePaginationControls(totalPages, start, end, sorted.length);
   updateSortIndicators();
+}
+
+function renderCompare() {
+  els.comparePanel.innerHTML = "";
+  if (compareMap.size === 0) {
+    const empty = document.createElement("div");
+    empty.className = "text-muted small";
+    empty.textContent = "No vehicles selected.";
+    els.comparePanel.appendChild(empty);
+    return;
+  }
+
+  Array.from(compareMap.values()).forEach(item => {
+    const col = document.createElement("div");
+    col.className = "col-12 col-md-6 col-lg-3";
+    col.innerHTML = `
+      <div class="compare-card">
+        <div class="compare-title">${item.carName}</div>
+        <div class="compare-meta">${item.year} • ${item.fuelType} • ${item.transmission}</div>
+        <div class="compare-grid mt-2">
+          <div>SELLING:</div><div>${currencyFormat.format(item.sellingPrice)}</div>
+          <div>PRESENT:</div><div>${currencyFormat.format(item.presentPrice)}</div>
+          <div>KMS:</div><div>${numberFormat.format(item.kmsDriven)}</div>
+          <div>SELLER:</div><div>${item.sellerType}</div>
+          <div>OWNER:</div><div>${item.owner}</div>
+        </div>
+      </div>
+    `;
+    els.comparePanel.appendChild(col);
+  });
 }
 
 function resizeCanvas(canvas) {
@@ -353,6 +395,53 @@ function drawLineChart(canvas, labels, values, color) {
   });
 }
 
+function drawScatterChart(canvas, points, color) {
+  resizeCanvas(canvas);
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  const padding = 34;
+  const xVals = points.map(p => p.x);
+  const yVals = points.map(p => p.y);
+  const xMin = Math.min(...xVals, 0);
+  const xMax = Math.max(...xVals, 1);
+  const yMin = Math.min(...yVals, 0);
+  const yMax = Math.max(...yVals, 1);
+  const xRange = xMax - xMin || 1;
+  const yRange = yMax - yMin || 1;
+
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.beginPath();
+  ctx.moveTo(padding, height - padding);
+  ctx.lineTo(width - padding, height - padding);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(padding, height - padding);
+  ctx.lineTo(padding, padding);
+  ctx.stroke();
+
+  ctx.fillStyle = color;
+  points.forEach(p => {
+    const x = padding + ((p.x - xMin) / xRange) * (width - padding * 2);
+    const y = height - padding - ((p.y - yMin) / yRange) * (height - padding * 2);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle = "#111827";
+  ctx.font = "12px \"Archivo\", \"Segoe UI\", sans-serif";
+  ctx.fillText("Kms Driven", width / 2 - 30, height - 8);
+  ctx.save();
+  ctx.translate(12, height / 2 + 30);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Selling Price", 0, 0);
+  ctx.restore();
+}
+
 function renderCharts() {
   const fuelCounts = {};
   state.filtered.forEach(item => {
@@ -374,6 +463,32 @@ function renderCharts() {
   const avgSelling = years.map(year => yearGroups[year].total / yearGroups[year].count);
   const yearLabels = years.map(year => String(year));
   drawLineChart(els.yearChart, yearLabels, avgSelling, "#16a34a");
+
+  const points = state.filtered.map(item => ({
+    x: item.kmsDriven,
+    y: item.sellingPrice
+  }));
+  drawScatterChart(els.scatterChart, points, "#0ea5e9");
+
+  const fuelAvg = {};
+  state.filtered.forEach(item => {
+    if (!fuelAvg[item.fuelType]) fuelAvg[item.fuelType] = { total: 0, count: 0 };
+    fuelAvg[item.fuelType].total += item.sellingPrice;
+    fuelAvg[item.fuelType].count += 1;
+  });
+  const fuelAvgLabels = Object.keys(fuelAvg);
+  const fuelAvgValues = fuelAvgLabels.map(key => fuelAvg[key].total / fuelAvg[key].count);
+  drawBarChart(els.fuelAvgChart, fuelAvgLabels, fuelAvgValues, "#8b5cf6");
+
+  const sellerAvg = {};
+  state.filtered.forEach(item => {
+    if (!sellerAvg[item.sellerType]) sellerAvg[item.sellerType] = { total: 0, count: 0 };
+    sellerAvg[item.sellerType].total += item.sellingPrice;
+    sellerAvg[item.sellerType].count += 1;
+  });
+  const sellerAvgLabels = Object.keys(sellerAvg);
+  const sellerAvgValues = sellerAvgLabels.map(key => sellerAvg[key].total / sellerAvg[key].count);
+  drawBarChart(els.sellerAvgChart, sellerAvgLabels, sellerAvgValues, "#f97316");
 }
 
 function setYearRange(data) {
@@ -433,6 +548,12 @@ function attachListeners() {
 
   els.nextPage.addEventListener("click", () => {
     currentPage += 1;
+    updateTableView();
+  });
+
+  els.clearCompare.addEventListener("click", () => {
+    compareMap.clear();
+    renderCompare();
     updateTableView();
   });
 }
@@ -535,6 +656,7 @@ async function loadData() {
   buildColumnToggles();
   applyColumnVisibility();
   attachListeners();
+  renderCompare();
 
   els.highlightMode.forEach(radio => {
     radio.addEventListener("change", event => {
@@ -553,6 +675,25 @@ async function loadData() {
     if (!row) return;
     document.querySelectorAll("tr.highlight-row").forEach(r => r.classList.remove("highlight-row"));
     row.classList.add("highlight-row");
+  });
+
+  els.tableBody.addEventListener("change", event => {
+    const target = event.target;
+    if (!target.classList.contains("compare-check")) return;
+    const id = Number(target.getAttribute("data-id"));
+    const item = state.filtered.find(row => row.id === id) || state.raw.find(row => row.id === id);
+    if (!item) return;
+    if (target.checked) {
+      if (compareMap.size >= maxCompare) {
+        target.checked = false;
+        alert(`You can compare up to ${maxCompare} vehicles.`);
+        return;
+      }
+      compareMap.set(id, item);
+    } else {
+      compareMap.delete(id);
+    }
+    renderCompare();
   });
 
   document.querySelector("thead").addEventListener("click", event => {

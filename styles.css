@@ -14,6 +14,38 @@ canvas {
   display: none !important;
 }
 
+.compare-col {
+  width: 70px;
+}
+
+.compare-check {
+  transform: scale(1.1);
+}
+
+.compare-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.compare-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.compare-meta {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  font-size: 0.85rem;
+}
+
 .sortable {
   cursor: pointer;
   user-select: none;

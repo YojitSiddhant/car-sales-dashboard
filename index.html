@@ -92,6 +92,21 @@
     </section>
 
     <section class="mb-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="card-title mb-1">Compare Vehicles</h5>
+              <p class="text-muted small mb-0">Select up to 4 vehicles from the table to compare.</p>
+            </div>
+            <button id="clearCompare" class="btn btn-sm btn-outline-secondary">Clear Compare</button>
+          </div>
+          <div id="comparePanel" class="row g-3"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4">
       <div class="row g-3">
         <div class="col-6 col-lg-3">
           <div class="card shadow-sm border-0 h-100">
@@ -148,6 +163,33 @@
             </div>
           </div>
         </div>
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+              <h5 class="card-title">Price vs Kms Driven</h5>
+              <p class="text-muted small">Scatter plot of selling price vs kms driven.</p>
+              <canvas id="scatterChart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+              <h5 class="card-title">Avg Price by Fuel</h5>
+              <p class="text-muted small">Average selling price by fuel type.</p>
+              <canvas id="fuelAvgChart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+              <h5 class="card-title">Avg Price by Seller</h5>
+              <p class="text-muted small">Average selling price by seller type.</p>
+              <canvas id="sellerAvgChart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -180,6 +222,7 @@
             <table class="table table-bordered align-middle text-center text-uppercase">
               <thead class="table-light">
                 <tr>
+                  <th class="compare-col">Select</th>
                   <th data-col="carName" class="sortable">Car Name <span class="sort-indicator"></span></th>
                   <th data-col="year" class="sortable">Year <span class="sort-indicator"></span></th>
                   <th data-col="sellingPrice" class="sortable">Selling Price <span class="sort-indicator"></span></th>
